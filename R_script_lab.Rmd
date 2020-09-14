@@ -1,0 +1,148 @@
+---
+title: "Data Manipulation"
+author: "HMF"
+date: "9/9/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+list.of.packages <- c("dplyr", "tidyr", "zoo", "ggplot2", "xfun")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r, warning=FALSE, message=FALSE}
+library(dplyr)
+library(tidyr)
+library(zoo)
+library(ggplot2)
+setwd("C:/Users/12672/Box/hannah/R demos")
+```
+
+# Read in data
+
+We are using data from the Lamprey River sensor record (LMP 73)
+To facilitate the processing, this is a subset of the full record
+
+```{r}
+lmp_subset <- read.csv("LMP_subset_sensor.csv") 
+head(lmp_subset)
+
+```
+
+pipes: %>%  cntl shift m 
+df_cleaned <- df %>%  #df_cleaned gets df which gets the filter of a dataframe  
+              filter(...) %>%  #which gets the select of that dataframe
+              select(...)
+# Clean and reshape
+
+```{r}
+#remove columns with grab sample data
+lmp_clean <- lmp_subset %>% 
+      select(DATETIME, Site, TempC, Conductivity, SpConductivity, pH, ODOPerCent, ODOMGL, TurbidityFNU, Q, NO3_corrected, FDOM_corrected_QSU,ABS254_SUNA,Year,Month,Day, Quarter) 
+# or %>%  select(-RECORD, -Nitrate_mg)
+     
+head(lmp_clean)
+
+```
+
+## group_by and summarize
+
+generate summary tables of your dataframes
+
+```{r}
+mean_month <- lmp_clean %>% 
+      group_by(Month)  %>% # creates a semi-hidden attribute of your dataframe
+      summarise(meanNO3 = mean(NO3_corrected), num_obs = n())
+
+head(mean_month)# returns NA. why? combines years also
+
+mean_month <- lmp_clean %>% 
+      group_by(Year, Month)  %>% # creates a semi-hidden attribute of your dataframe
+      summarise(meanNO3 = mean(NO3_corrected, na.rm = TRUE), num_obs = n())
+
+head(mean_month)
+
+#in what month were nitrate concentrations and discharge highest
+month_max <- lmp_clean %>% 
+      group_by(Year, Month) %>% 
+      summarise(NO3_max = max(NO3_corrected, na.rm = TRUE), Q_max = max(Q, na.rm=TRUE)) %>% 
+      arrange(-NO3_max) #arrange dataframe in decreasing order
+
+head(month_max)
+
+```
+
+
+Generate new column with values based on another column
+What year had the highest summer concentration?
+
+```{r}
+# generate a season column based on quarter
+lmp_clean$Season <- ifelse(lmp_clean$Quarter == "1", "Winter", ifelse(lmp_clean$Quarter == "2", "Spring", ifelse(lmp_clean$Quarter == "3", "Summer", "Fall")))
+
+tail(lmp_clean)
+summer_max <- lmp_clean %>% 
+      filter(Season == "Summer") %>% 
+      group_by(Year) %>% 
+      summarise(NO3_max = max(NO3_corrected, na.rm = TRUE)) 
+head(summer_max)
+
+#simple ifelse() statement: 
+#qualify high and low discharge based on mean
+
+lmp_clean$Qqual <- ifelse(lmp_clean$Q < 8000, "lower", "higher")
+
+head(lmp_clean)
+
+```
+
+Calculate moving average using dplyr pipeline
+
+```{r}
+daily_lmp <- lmp_clean %>%
+  mutate(NO3_01da = rollapply(NO3_corrected, width = 96, FUN = mean, partial = 48),
+         NO3_07da = rollapply(NO3_corrected, width = 672, FUN = mean, partial = 48),
+         NO3_30da = rollapply(NO3_corrected, width = 2880, FUN = mean, partial = 48))
+tail(daily_lmp)
+
+```
+
+Plot time series
+
+```{r}
+plot(x=daily_lmp$NO3_corrected, xlab="Time", ylab="NO3 (mg/L)", col="deepskyblue", type="l") 
+
+plot(x=daily_lmp$NO3_01da, xlab="Time", ylab="NO3 (mg/L)", col="deepskyblue", type="l", main="Daily moving average") 
+
+plot(x=daily_lmp$NO3_07da, xlab="Time", ylab="NO3 (mg/L)", col="darkgreen", type="l", main="Weekly moving average")
+
+plot(x=daily_lmp$NO3_30da, xlab="Time", ylab="NO3 (mg/L)", col="black", type="l", main="Monthly moving average")
+
+```
+
+Plot using ggplot2
+
+Use CQ data from WRR paper to illustrate ggplot
+```{r}
+lmpcq <- read.csv("LMP_30win_cq.csv")
+
+head(lmpcq)
+
+
+```
+
+```{r}
+ggplot(lmpcq, aes(y=NO3cq, x=NO3Q_rvalue, col = 'blue')) +geom_point()
+
+```
+
+
+```{r}
+
+```
+
