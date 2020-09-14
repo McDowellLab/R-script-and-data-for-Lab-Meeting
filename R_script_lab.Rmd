@@ -83,7 +83,9 @@ What year had the highest summer concentration?
 
 ```{r}
 # generate a season column based on quarter
-lmp_clean$Season <- ifelse(lmp_clean$Quarter == "1", "Winter", ifelse(lmp_clean$Quarter == "2", "Spring", ifelse(lmp_clean$Quarter == "3", "Summer", "Fall")))
+lmp_clean$Season <- ifelse(lmp_clean$Quarter == "1", "Winter", 
+                           ifelse(lmp_clean$Quarter == "2", "Spring", 
+                                  ifelse(lmp_clean$Quarter == "3", "Summer", "Fall")))
 
 tail(lmp_clean)
 summer_max <- lmp_clean %>% 
@@ -105,9 +107,9 @@ Calculate moving average using dplyr pipeline
 
 ```{r}
 daily_lmp <- lmp_clean %>%
-  mutate(NO3_01da = rollapply(NO3_corrected, width = 96, FUN = mean, partial = 48),
-         NO3_07da = rollapply(NO3_corrected, width = 672, FUN = mean, partial = 48),
-         NO3_30da = rollapply(NO3_corrected, width = 2880, FUN = mean, partial = 48))
+  mutate(NO3_01da = rollapply(NO3_corrected, width = 96, FUN = mean, partial = 48), # daily
+         NO3_07da = rollapply(NO3_corrected, width = 672, FUN = mean, partial = 48), # weekly
+         NO3_30da = rollapply(NO3_corrected, width = 2880, FUN = mean, partial = 48)) # monthly
 tail(daily_lmp)
 
 ```
@@ -137,12 +139,42 @@ head(lmpcq)
 ```
 
 ```{r}
-ggplot(lmpcq, aes(y=NO3cq, x=NO3Q_rvalue, col = 'blue')) +geom_point()
+ggplot(lmpcq, aes(y=NO3cq, x=NO3Q_rvalue )) +geom_point(col = 'blue')
+
 
 ```
 
 
 ```{r}
+ggplot(lmpcq, aes(y=NO3cq, x=NO3Q_rvalue )) +geom_point(col = 'blue') + 
+  scale_x_continuous(limits= c(-1,1)) + xlab(expression(italic(r) ~"r value")) +
+  ylab(expression("NO"[3]^~{} ~ "CQ"))
+
+
+```
+
+```{r}
+ggplot(lmpcq, aes(y=NO3cq, x=NO3Q_rvalue, shape=as.factor(Year), col=Season )) + geom_point(size=3) + 
+  scale_x_continuous(limits= c(-1,1)) + xlab(expression(italic(r) ~" value")) +
+  ylab(expression("NO"[3]^~{} ~ "CQ"))  + scale_shape_manual(values = c("2012" = 4,"2013" =21, "2014" = 22, "2015" = 23, "2016" = 24, "2017" = 25)) + scale_color_manual(values= c("Fall" = "chocolate4", "Spring" = "ForestGreen", "Summer" = "goldenrod2", "Winter" = "darkblue")) 
+  
+
+
+
+```
+
+Change them to customize look. 
+```{r}
+library(cowplot)
+ggplot(lmpcq, aes(y=NO3cq, x=NO3Q_rvalue, shape=as.factor(Year), col=Season )) + geom_point(size=3) + 
+  scale_x_continuous(limits= c(-1,1)) + xlab(expression(italic(r) ~" value")) +
+  ylab(expression("NO"[3]^~{} ~ "CQ"))  + scale_shape_manual(values = c("2012" = 4,"2013" =21, "2014" = 22, "2015" = 23, "2016" = 24, "2017" = 25)) + scale_color_manual(values= c("Fall" = "chocolate4", "Spring" = "ForestGreen", "Summer" = "goldenrod2", "Winter" = "darkblue")) + theme_cowplot() + theme(legend.position = "none")
+  
+```
+```{r}
+ggplot(lmpcq, aes(y=NO3cq, x=NO3Q_rvalue, shape=as.factor(Year), col=Season )) + geom_point(size=3) + 
+  scale_x_continuous(limits= c(-1,1)) + xlab(expression(italic(r) ~" value")) +
+  ylab(expression("NO"[3]^~{} ~ "CQ"))  + scale_shape_manual(values = c("2012" = 4,"2013" =21, "2014" = 22, "2015" = 23, "2016" = 24, "2017" = 25)) + scale_color_manual(values= c("Fall" = "chocolate4", "Spring" = "ForestGreen", "Summer" = "goldenrod2", "Winter" = "darkblue")) + theme_cowplot() + theme(legend.position = "none") + annotate("rect", ymin=-0.2, ymax=0.2, xmin=-Inf, xmax=Inf, alpha=0.1) + annotate("rect", xmin=-0.3, xmax=0.3, ymin=-Inf, ymax=Inf, alpha=0.1, col="blue", fill="blue") + annotate("text", label="A", x=-1,y=2)
 
 ```
 
