@@ -11,6 +11,7 @@ new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"
 if(length(new.packages)) install.packages(new.packages)
 
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '.')
 ```
 
 ## R Markdown
@@ -20,7 +21,6 @@ library(dplyr)
 library(tidyr)
 library(zoo)
 library(ggplot2)
-setwd("C:/Users/12672/Box/hannah/R demos")
 ```
 
 # Read in data
